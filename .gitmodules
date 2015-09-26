@@ -1,3 +1,0 @@
-[submodule "artifact-template-engine"]
-	path = template-engine
-	url = http://github.com/martin-grand/artifact-template-engine

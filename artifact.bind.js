@@ -9,7 +9,7 @@
  *
  *
  * <a data-click="methodName:parameter"></a>
- * <a data-clicks="{methodName:'parameter',methodName2:'parameter'}"></a>
+ * <a data-click="{methodName:'parameter',methodName2:'parameter'}"></a>
  *
  */
 
@@ -19,21 +19,10 @@ Artifact.bind = (function (_window) {
 	var exports = {},
 
 		eventMap = {},
-		events = [
-			['click', 'clicks'],
-			['change', 'changes'],
-			['blur', 'blurs'],
-			['focus', 'focuses']
-		];
+		events = ['click', 'change', 'blur', 'focus'];
 
 	function init() {
-		initBindings();
-	}
-
-	function initBindings() {
-		var i = 0;
-
-		for (i = 0; i < events.length; i++) {
+		for (var i = 0; i < events.length; i++) {
 			createBind(events[i]);
 			$body.on(events[i], '[data-' + events[i] + ']', callEvent(events[i]));
 		}
@@ -43,21 +32,39 @@ Artifact.bind = (function (_window) {
 	function callEvent(eventName) {
 		return function (event) {
 			var $this = $(this),
-				binderAttributes = $this.attr('data-' + eventName).split(';'),
-				i,
-				methodName,
-				methodArgument;
+				binderString = $this.attr('data-' + eventName),
+				binders = {},
+				methodName;
 
-			for (i = 0; i < binderAttributes.length; i++) {
-				methodName = binderAttributes[i].split(':')[0];
-				methodArgument = binderAttributes[i].substr(methodName.length + 1);
-				if (eventMap.hasOwnProperty(eventName)) {
-					if (eventMap[eventName].hasOwnProperty(methodName)) {
-						eventMap[eventName][methodName](event, methodArgument);
-					}
-				}
+			if (!eventMap.hasOwnProperty(eventName)) {
+				console.error('eventMap not set:', eventName);
+				return false;
 			}
+
+			if (binderString.charAt(0) === '{') {
+				// case: <a data-click="{methodName:'parameter',methodName2:'parameter'}"></a>
+				try {
+					binders = _window.eval(binderString);
+				} catch (e) {
+					console.error('invalid binder string:', binderString, this);
+					return false;
+				}
+
+			} else {
+				methodName = binderString.split(':')[0];
+				binders[methodName] = binderString.replace(methodName, '');
+			}
+
+			for (methodName in binders) {
+				if (binders.hasOwnProperty(methodName) &&
+					eventMap[eventName].hasOwnProperty(methodName)) {
+					eventMap[eventName][methodName](event, binders[methodName]);
+				}
+
+			}
+
 		};
+
 	}
 
 	function createBind(eventName) {
